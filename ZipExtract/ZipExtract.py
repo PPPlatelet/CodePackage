@@ -62,7 +62,7 @@ def ChangeConf() -> dict:
             temp = ''
             break
         else:
-            logging.error("Input Failed! Please input again. ")
+            logging.warning("Input Failed! Please input again. ")
             continue
     while True:
         temp = input("Using lower case letter? (Y/N) \n")
@@ -75,7 +75,7 @@ def ChangeConf() -> dict:
             temp = ''
             break
         else:
-            logging.error("Input Failed! Please input again. ")
+            logging.warning("Input Failed! Please input again. ")
             continue
     while True:
         temp = input("Using upper case letter? (Y/N) \n")
@@ -88,7 +88,7 @@ def ChangeConf() -> dict:
             temp = ''
             break
         else:
-            logging.error("Input Failed! Please input again. ")
+            logging.warning("Input Failed! Please input again. ")
             continue
     while True:
         temp = input("Using special symbol? (Y/N) \n")
@@ -101,7 +101,7 @@ def ChangeConf() -> dict:
             temp = ''
             break
         else:
-            logging.error("Input Failed! Please input again. \n")
+            logging.warning("Input Failed! Please input again. \n")
             continue
     while True:
         temp = input("Using space? (Y/N) ")
@@ -114,7 +114,7 @@ def ChangeConf() -> dict:
             temp = ''
             break
         else:
-            logging.error("Input Failed! Please input again. ")
+            logging.warning("Input Failed! Please input again. ")
             continue
     while True:
         temp = input("Input crack number. (>0) \n")
@@ -123,7 +123,7 @@ def ChangeConf() -> dict:
             conf["Codelen"] = int(temp)
             break
         except AssertionError as e:
-            logging.error("Wrong number! Please input the correct one. \n")
+            logging.warning("Wrong number! Please input the correct one. \n")
             continue
     return conf
 
@@ -186,7 +186,7 @@ class ZipExtract:
         try:
             if os.path.exists(target):
                 return
-            patoolib.extract_archive(root,outdir = target)
+            patoolib.extract_archive(archive = root, outdir = target, verbosity = -1)
             logging.info(f"File {filename} extract successed.")
         except patoolib.util.PatoolError as e:
             logging.debug(e)
@@ -198,7 +198,7 @@ class ZipExtract:
                             password = password.strip()
                             try:
                                 shutil.rmtree(target)
-                                patoolib.extract_archive(root,outdir = target, password = password)
+                                patoolib.extract_archive(archive = root, outdir = target, password = password, verbosity=-1)
                                 logging.info(f"File {filename} extract successed. Password = {password}.")
                                 return
                             except:
@@ -208,7 +208,7 @@ class ZipExtract:
                     password = "".join(patt)
                     try:
                         shutil.rmtree(target)
-                        patoolib.extract_archive(root,outdir = target, password = password)
+                        patoolib.extract_archive(archive = root, outdir = target, password = password, verbosity=-1)
                         logging.info(f"File {filename} extract successed. Password = {password}.")
                         return
                     except patoolib.util.PatoolError as e:
@@ -223,7 +223,7 @@ def main():
         with open("config.json","r") as js:
             conf = json.load(js)
         choose = input("Config already existed! Change again?")
-        if choose in ('Y','n'):
+        if choose in ('Y','y'):
             conf = ChangeConf()
         elif choose in ('N','n'):
             pass
