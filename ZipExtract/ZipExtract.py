@@ -29,7 +29,7 @@ def CheckFile() -> dict:
             filepath = os.path.join(root,file)
             filesplit:list = file.split('.')
             filename = filesplit[0]
-            pattern = re.compile(rf"({filesplit[0]})+")
+            pattern = re.compile(rf"({filename})+")
 
             if file.endswith(multipartextension):
                 path = []
@@ -185,7 +185,7 @@ class ZipExtract:
     def DeFiles(self,target:str = None,root:str = None,filename:str = None) -> None:
         try:
             if os.path.exists(target):
-                return
+                shutil.rmtree(target)
             patoolib.extract_archive(archive = root, outdir = target, verbosity = -1)
             logging.info(f"File {filename} extract successed.")
         except patoolib.util.PatoolError as e:
