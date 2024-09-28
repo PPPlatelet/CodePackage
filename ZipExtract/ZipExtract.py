@@ -1,6 +1,6 @@
 import logging
 import os
-from string import digits,ascii_lowercase,ascii_uppercase,punctuation,whitespace,printable
+from string import digits,ascii_lowercase,ascii_uppercase,punctuation,whitespace
 import re
 from itertools import product
 import json
@@ -16,6 +16,13 @@ textextension = (".txt",".doc",".docx",".xls",".xlsx",".ppt",".pptx",".pdf")
 multipartextension = (".001",".part1.rar")
 outdirectory = f"{os.getcwd()}\\extracted"
 os.makedirs(outdirectory,exist_ok=True)
+doc = {
+    "Numok": "number",
+    "LowercaseOK": "lower case letter",
+    "UppercaseOK": "upper case letter",
+    "SpecialsymbolOK": "special symbol",
+    "SpaceOK": "space"
+    }
 
 def CheckFile() -> dict:
     zipfiles = {}
@@ -51,75 +58,22 @@ def CheckFile() -> dict:
 
 def ChangeConf() -> dict:
     conf = {}
-    while True:
-        temp = input("Using number? (Y/N) \n")
-        if temp in ['Y','y']:
-            conf["Numok"] = True
-            temp = ''
-            break
-        elif temp in ['N','n']:
-            conf["Numok"] = False
-            temp = ''
-            break
-        else:
-            logging.warning("Input Failed! Please input again. ")
-            continue
-    while True:
-        temp = input("Using lower case letter? (Y/N) \n")
-        if temp in ['Y','y']:
-            conf["LowercaseOK"] = True
-            temp = ''
-            break
-        elif temp in ['N','n']:
-            conf["LowercaseOK"] = False
-            temp = ''
-            break
-        else:
-            logging.warning("Input Failed! Please input again. ")
-            continue
-    while True:
-        temp = input("Using upper case letter? (Y/N) \n")
-        if temp in ['Y','y']:
-            conf["UppercaseOK"] = True
-            temp = ''
-            break
-        elif temp in ['N','n']:
-            conf["UppercaseOK"] = False
-            temp = ''
-            break
-        else:
-            logging.warning("Input Failed! Please input again. ")
-            continue
-    while True:
-        temp = input("Using special symbol? (Y/N) \n")
-        if temp in ['Y','y']:
-            conf["SpecialsymbolOK"] = True
-            temp = ''
-            break
-        elif temp in ['N','n']:
-            conf["SpecialsymbolOK"] = False
-            temp = ''
-            break
-        else:
-            logging.warning("Input Failed! Please input again. \n")
-            continue
-    while True:
-        temp = input("Using space? (Y/N) ")
-        if temp in ['Y','y']:
-            conf["SpaceOK"] = True
-            temp = ''
-            break
-        elif temp in ['N','n']:
-            conf["SpaceOK"] = False
-            temp = ''
-            break
-        else:
-            logging.warning("Input Failed! Please input again. ")
-            continue
+    for key,value in doc.items():
+        while True:
+            temp = input(f"Using {value}? (Y/N) \n")
+            if temp in ('Y','y'):
+                conf[key] = True
+                break
+            elif temp in ('N','n'):
+                conf[key] = False
+                break
+            else:
+                logging.warning("Input Failed! Please input again. ")
+                continue
     while True:
         temp = input("Input crack number. (>0) \n")
         try:
-            assert isinstance(temp,int) and int(temp) > 0
+            assert int(temp) > 0
             conf["Codelen"] = int(temp)
             break
         except AssertionError as e:
@@ -129,8 +83,8 @@ def ChangeConf() -> dict:
 
 class ZipExtract:
     def __init__(self,config:dict = {}) -> None:
-        self.filepath = config["zippath"] if config["zippath"] is not None else {}
-        self.numOK = config["Numok"] if config["Numok"] is not None else False
+        self.filepath = config.get('zippath', {})
+        self.numOK = config.get('Numok', False)
         self.lowercaseOK = config["LowercaseOK"] if config["LowercaseOK"] is not None else False
         self.uppercaseOK = config["UppercaseOK"] if config["UppercaseOK"] is not None else False
         self.specialsymbolOK = config["SpecialsymbolOK"] if config["SpecialsymbolOK"] is not None else False
@@ -139,7 +93,8 @@ class ZipExtract:
         self.codelen = config["Codelen"] if config["Codelen"] is not None else 0
         self.pattstr = ""
     
-    def FindExt(self,path:list|str = None):
+    @classmethod
+    def FindExt(cls, path:list|str = None):
         fileextension = ""
         try:
             assert isinstance(path,list)

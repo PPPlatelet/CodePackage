@@ -30,5 +30,7 @@ int main()
         std::cout << "Invalid choice! " << std::endl;
     }
 
+    system("pause");
+
     return 0;
 }

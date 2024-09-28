@@ -16,16 +16,15 @@ vector<int> BuildNext(const string& pattern)
             prefix_len++;
             next[i] = prefix_len;
             i++;
+            continue;
         } 
-        else 
+        if (prefix_len != 0) 
         {
-            if (prefix_len != 0) prefix_len = next[prefix_len - 1];
-            else 
-            {
-                next[i] = 0;
-                i++;
-            }
+            prefix_len = next[prefix_len - 1];
+            continue;
         }
+        next[i] = 0;
+        i++;
     }
     return next;
 }
@@ -45,13 +44,13 @@ int KMPSearch(const string& text, const string& pattern) {
                 delete next;
                 return i - j; // Pattern found at index i - j
             }
-        } else {
-            if (j != 0) {
-                j = (*next)[j - 1];
-            } else {
-                i++;
-            }
+            continue;
+        } 
+        if (j != 0) {
+            j = (*next)[j - 1];
+            continue;
         }
+        i++;
     }
     delete next;
     return -1; // Pattern not found
