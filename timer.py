@@ -5,6 +5,8 @@ from functools import wraps
 from typing import Any, Callable
 
 logger = logging.getLogger('Timer')
+class FunctionTimeoutError(Exception):
+    pass
 
 def get_func_path(func: Callable[..., Any]) -> str:
     """
@@ -116,7 +118,7 @@ def timer(timeout: int = 1):
                 target_thread.start()
 
                 if not stop_event.wait(timeout=timeout):
-                    raise TimeoutError(f"Function {path} timed out after {timeout} seconds")
+                    raise FunctionTimeoutError(f"Function {path} timed out after {timeout} seconds")
 
                 if exc is not None:
                     raise exc
