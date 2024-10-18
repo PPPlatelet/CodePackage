@@ -1,10 +1,11 @@
 from functools import wraps
 import inspect
+from typing import Any, Callable
 
 class OverloadError(Exception):
     pass
 
-def get_function_types(*params):
+def get_function_types(*params: Callable[..., Any] | tuple | dict):
     types = []
 
     for param in params:
@@ -19,7 +20,7 @@ def get_function_types(*params):
     
     return tuple(types)
 
-def get_param_types(params):
+def get_param_types(params: tuple):
     types = []
 
     for param in params:
@@ -148,6 +149,11 @@ def foo(a: str):
 def foo(a: dict):
     return f"Dict: {a}"
 
+@overload2('foo', tuple)
+def foo(a: tuple):
+    return f"Tuple: {a}"
+
 print(foo(10))
 print(foo("hello"))
 print(foo({'b': 1, 'c': '2'}))
+print(foo((1, 2, 3, 'a', 'b', 'c')))
