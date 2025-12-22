@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <cmath>
 
-static const int s[] = {11, 10, 3, 8, 4, 6};
+static const int s[] = { 11, 10, 3, 8, 4, 6 };
 static const int xor_val = 177451812;
 static const unsigned long long add_val = 8728348608;
 static const std::string table = "fZodR9XQDSUm21yCkr6zBqiveYah8bt4xsWpHnJE7jL5VG3guMTKNPAwcF";

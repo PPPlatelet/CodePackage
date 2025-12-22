@@ -1,8 +1,7 @@
-def main():
-    number = int(input())
+def getprimes(number: int) -> list[int]:
     cnt = 0
     if number <= 1:
-        exit(1)
+        return []
     
     isprime = [True] * (number + 1)
     isprime[1] = False
@@ -21,9 +20,14 @@ def main():
             j += 1
             prime = primes[j]
 
-    for i in range(1, cnt + 1):
-        print(primes[i], end=' ')
-    print()
+    return primes[1:cnt + 1]
+
+def main():
+    number = int(input())
+    primes: list[int] = getprimes(number)
+
+    for prime in primes:
+        print(prime, end = " ")
 
 if __name__ == '__main__':
     main()

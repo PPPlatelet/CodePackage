@@ -2,7 +2,7 @@
 KMP search
 """
 
-def BuildNext(patt):
+def BuildNext(patt: str):
     """
     Build the longest proper prefix which is also a suffix (lps) array for the pattern.
     """
@@ -22,7 +22,7 @@ def BuildNext(patt):
                 prefix_len = next[prefix_len - 1]
     return next
 
-def KMPSearch(string, patt):
+def KMPSearch(string: str, patt: str):
     """
     Search for occurrences of pattern in text using the Knuth-Morris-Pratt (KMP) algorithm.
     """

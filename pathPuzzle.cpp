@@ -6,13 +6,14 @@
 using namespace std;
 
 class Solution {
+private:
     int dx[4] = { 0, 0, 1, -1 };
     int dy[4] = { 1, -1, 0, 0 };
 public:
     vector<int> pathPuzzle(int col[], int row[], int n) {
         vector<vector<bool>> vis(n, vector<bool>(n, false));
         vector<int> path;
-        function<bool(int, int)> dfs = [&](int x, int y) {
+        function<bool(int, int)> dfs = [&](int x, int y) -> bool {
             if (x < 0 || x >= n || y < 0 || y >= n) return false;
             if (vis[x][y]) return false;
             if (row[x] == 0 || col[y] == 0) return false;

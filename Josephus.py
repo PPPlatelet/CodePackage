@@ -4,7 +4,7 @@ import math
 Josephus's Question
 """
 
-def Josephus(num):
+def Josephus(num: int):
     # Count the number of bits in num
     count = 0
     temp = num
@@ -16,7 +16,7 @@ def Josephus(num):
     # Perform XOR operation to get the result
     return num ^ mask
 
-def Josephusmath(num):
+def Josephusmath(num: int):
     # Calculate the power of 2 closest to num
     power = int(math.log2(num))
     # Calculate the remainder
@@ -24,7 +24,7 @@ def Josephusmath(num):
     # Return the remainder
     return remainder
 
-def Josephus2(num):
+def Josephus2(num: int):
     # Count the number of bits in num
     count = 0
     temp = num
@@ -39,6 +39,8 @@ def Josephus2(num):
 #Test code
 def main():
     num = int(input("Enter a number: "))
+    r = 1 << (num.bit_length() - 1)
+    print(num - r)
     result = Josephus(num)
     #result = Josephusmath(num)
     #result = Josephus2(num)

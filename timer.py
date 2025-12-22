@@ -1,12 +1,23 @@
 import logging
 import time
 import threading
+from queue import Queue
 from functools import wraps
 from typing import Any, Callable
 
 logger = logging.getLogger('Timer')
+logging.basicConfig(level=logging.DEBUG, format='%(levelname)s │ %(message)s')
+
 class FunctionTimeoutError(Exception):
     pass
+
+def fib(n: int) -> int:
+    if n <= 1:
+        return n
+    a, b = 0, 1
+    for _ in range(2, n + 1):
+        a, b = b, a + b
+    return b
 
 def get_func_path(func: Callable[..., Any]) -> str:
     """
@@ -33,7 +44,7 @@ def get_func_path(func: Callable[..., Any]) -> str:
     return '.'.join(filter(lambda x: x != '', [module, qualname]))
 
 class TimerLogger:
-    def __init__(self, func, level):
+    def __init__(self, func: Callable[..., Any], level: int):
         self.path = get_func_path(func)
         self.original_level = level
         logger.setLevel(logging.DEBUG)
@@ -43,9 +54,9 @@ class TimerLogger:
         self.start_time = time.perf_counter()
         return self.path
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: type, exc_val: Exception, exc_tb: Any):
         self.execution_time = (time.perf_counter() - self.start_time) * 1e3
-        logger.debug(f"{self.path} | Leave, {self.execution_time} ms")
+        logger.debug(f"{self.path} | Leave, {self.execution_time:.2f} ms")
         logger.setLevel(self.original_level)
         """
         if exc_type is None:
@@ -57,7 +68,8 @@ class TimerLogger:
                 logger.error(f"{self.path} | Traceback:\n{tb_str}")
         """
 
-def timer(timeout: int = 1):
+F = Callable[..., Any]
+def timer(timeout: int | float = 1):
     """
     A decorator to measure the execution time of a function with timeout control.
 
@@ -91,15 +103,14 @@ def timer(timeout: int = 1):
 
     Raises:
         TypeError: If the function is not callable.
-        TimeoutError: If the function execution time exceeds the specified timeout.
+        FunctionTimeoutError: If the function execution time exceeds the specified timeout.
         Exception: Any exceptions that may be thrown by the decorated function.
     """
-    def decorator(func):
+    def decorator(func: F) -> F:
         if not callable(func):
             raise TypeError(f"Expected a callable, but got {type(func).__name__}")
-
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             result, exc = None, None
             stop_event, _lock = threading.Event(), threading.RLock()
 
@@ -125,3 +136,52 @@ def timer(timeout: int = 1):
                 return result
         return wrapper
     return decorator
+
+@timer(timeout=2)
+def fun(t: int):
+    logger.info(f"Function 'fun' running. Sleep for {t} seconds...")
+    time.sleep(t)
+
+def test():
+    threads: list[threading.Thread] = []
+    for t in range(5):
+        threads.append(threading.Thread(target=fun, args=(t,)))
+    
+    for thread in threads:
+        try:
+            thread.start()
+        except FunctionTimeoutError as e:
+            logger.error(e)
+
+@timer(timeout=2)
+def test2():
+    _lock = threading.Lock()
+
+    def worker(t: int, q: Queue[tuple[int, int]]) -> None:
+        result = fib(t)
+        with _lock:
+            q.put((t, result))
+
+    threads: list[threading.Thread] = []
+    results: Queue[tuple[int, int]] = Queue()
+    for t in range(20, 40, 2):
+        threads.append(threading.Thread(target=worker, args=(t, results)))
+
+    for thread in threads:
+        try:
+            thread.start()
+        except FunctionTimeoutError as e:
+            logger.error(e)
+    
+    for thread in threads:
+        thread.join()
+
+    while not results.empty():
+        t, result = results.get()
+        print(f"fib({t}) = {result}")
+
+if __name__ == '__main__':
+    try:
+        test2()
+    except FunctionTimeoutError as e:
+        logger.error(e)
