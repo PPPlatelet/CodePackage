@@ -167,7 +167,6 @@ u32 u32_read_bits(const u32 *src, int start_bit, int end_bit)
     u32 value = (*src & mask) >> start_bit;
 
     return value;
-
 }
 
 // 按位写入
@@ -218,21 +217,22 @@ void bigint_write_bits(struct BigInt *dest, const u32 *src, int start_bit, int e
 
 // 按位读出
 u32 bigint_read_bits(const BigInt *a,
-                        int start_bit,
-                        int end_bit)
+                     int start_bit,
+                     int end_bit)
 {
     // if (start_bit < 0 || end_bit < start_bit) return 0;
 
-    int len = end_bit - start_bit + 1;  // <= 32
+    int len = end_bit - start_bit + 1; // <= 32
 
     int block = start_bit / 32;
-    int off   = start_bit % 32;
+    int off = start_bit % 32;
 
-    if (off + len <= 32) {
+    if (off + len <= 32)
+    {
         return u32_read_bits(&a->d[block], off, off + len - 1);
     }
 
-    int first_bits  = 32 - off;
+    int first_bits = 32 - off;
     int second_bits = len - first_bits;
 
     u32 low_part = u32_read_bits(&a->d[block],
