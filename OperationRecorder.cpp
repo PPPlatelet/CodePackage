@@ -3,6 +3,7 @@
 #include <string>
 #include <stdexcept>
 #include <optional>
+#include <mutex>
 
 #define BUFFER_SIZE 10000
 
@@ -24,117 +25,73 @@ private:
     size_t tail;
     size_t count;
     size_t undocount;
-    size_t total;
+
+    mutable std::mutex mtx;
 
 public:
     OperationRecorder(size_t size = BUFFER_SIZE)
-        : buffer_size(size), buffer(), tail(0), count(0), undocount(0), total(0) {}
+        : buffer_size(size), buffer(size), tail(0), count(0), undocount(0) {}
 
-    void record(const std::string &data)
+    template <typename T>
+    void record(T &&data)
     {
+        std::lock_guard<std::mutex> lock(mtx);
+
         if (undocount > 0)
         {
             count -= undocount;
             undocount = 0;
         }
-
-        if (tail == total)
-        {
-            buffer.push_back(data);
-            total++;
-        }
-        else
-        {
-            buffer[tail] = data;
-        }
+        buffer[tail] = std::forward<T>(data);
 
         tail = next(tail, buffer_size);
         if (count < buffer_size)
-        {
             count++;
-        }
     }
 
-    std::optional<std::string> undo()
+    std::optional<std::string> undo(size_t step = 1)
     {
+        std::lock_guard<std::mutex> lock(mtx);
+
         if (undocount >= count)
         {
             return std::nullopt;
         }
 
-        tail = prev(tail, buffer_size);
-        undocount++;
+        size_t actual = std::min(step, count - undocount);
+
+        tail = prev(tail, buffer_size, actual);
+        undocount += actual;
         return buffer[tail];
     }
 
-    std::optional<std::string> redo()
+    std::optional<std::string> redo(size_t step = 1)
     {
+        std::lock_guard<std::mutex> lock(mtx);
+
         if (undocount == 0)
         {
             return std::nullopt;
         }
 
-        undocount--;
-        std::string tmp = *buffer[tail];
-        tail = next(tail, buffer_size);
+        size_t actual = std::min(step, undocount);
+
+        undocount -= actual;
+
+        std::string tmp = buffer[next(tail, buffer_size, actual - 1)].value();
+
+        tail = next(tail, buffer_size, actual);
+
         return tmp;
     }
 
     void clear()
     {
+        std::lock_guard<std::mutex> lock(mtx);
+
         tail = 0;
         count = 0;
         undocount = 0;
-    }
-};
-
-class OperationRecorderLite
-{
-private:
-    size_t buffer_size;
-    std::vector<std::optional<std::string>> buffer;
-    size_t head;
-    size_t count;
-
-public:
-    bool can_undo;
-
-    OperationRecorderLite(size_t size = BUFFER_SIZE)
-        : buffer_size(size), buffer(size), head(0), count(0), can_undo(false) {}
-
-    void record(const std::string &data)
-    {
-        buffer[head] = data;
-        head = next(head, buffer_size);
-        can_undo = true;
-        if (count < buffer_size)
-            count++;
-    }
-
-    std::optional<std::string> undo()
-    {
-        switch (count)
-        {
-        case 0:
-            return std::nullopt;
-        case 1:
-            can_undo = false;
-        }
-        head = prev(head, buffer_size);
-        count--;
-        return buffer[head];
-    }
-
-    std::optional<std::string> redo()
-    {
-        return std::nullopt;
-    }
-
-    void clear()
-    {
-        head = 0;
-        count = 0;
-        can_undo = false;
     }
 };
 
@@ -143,21 +100,6 @@ class Player;
 
 int main()
 {
-    OperationRecorder recorder(5);
-    recorder.record("Operation 1");
-    recorder.record("Operation 2");
-    recorder.record("Operation 3");
-
-    auto op = recorder.undo();
-    if (op)
-        std::cout << "Undid: " << *op << std::endl;
-
-    op = recorder.redo();
-    if (op)
-        std::cout << "Redid: " << *op << std::endl;
-
-    recorder.clear();
-    return 0;
 }
 
 struct Block
@@ -175,12 +117,13 @@ private:
     size_t tail;
     size_t count;
     size_t undocount;
-    size_t total;
+
 public:
     Player()
-        : buffer(BUFFER_SIZE), tail(0), count(0), undocount(0), total(0) {}
-    
-    void record(Block &block)
+        : buffer(BUFFER_SIZE), tail(0), count(0), undocount(0) {}
+
+    template <typename T>
+    void record(T &&block)
     {
         if (undocount > 0)
         {
@@ -188,7 +131,7 @@ public:
             undocount = 0;
         }
 
-        buffer[tail] = block;
+        buffer[tail] = std::forward<T>(block);
 
         // if (block.source == nullptr)
         // {
@@ -222,7 +165,7 @@ public:
 
         tail = prev(tail, BUFFER_SIZE);
         undocount++;
-        
+
         // if (buffer[tail]->source == nullptr)
         // {
         //     return std::nullopt;
@@ -230,14 +173,14 @@ public:
         // else
         if (buffer[tail]->source == this)
         {
-            
+
             buffer[tail]->count--;
             if (buffer[tail]->count == 0)
             {
                 buffer[tail]->source = nullptr;
             }
             return buffer[tail];
-        } 
+        }
         else
         {
             return std::nullopt;
