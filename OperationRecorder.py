@@ -110,14 +110,15 @@ class Client():
                     self.skill(self.segment[self.segment_idx])
                     return
                 
-                if self.undocount < self.count:
-                    if self.buffer_idx == 16:
+                if self.buffer_idx == 16:
+                    if self.undocount < self.count:
                         self.tail = Prev(self.tail, 10000)
                         self.undocount += 1
 
-                        self.buffer_idx -= 1
+                        self.buffer_idx = 15
                         self.skill(self.buffer[self.tail][self.buffer_idx])
-                        return
+                    return
+
                 if 0 < self.buffer_idx < 16:
                     self.buffer_idx -= 1
                     self.skill(self.buffer[self.tail][self.buffer_idx])
