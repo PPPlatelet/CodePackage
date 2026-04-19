@@ -45,8 +45,7 @@ public:
         buffer[tail] = std::forward<T>(data);
 
         tail = next(tail, buffer_size);
-        if (count < buffer_size)
-            count++;
+        count = std::min(count + 1, buffer_size);
     }
 
     std::optional<std::string> undo(size_t step = 1)
