@@ -90,8 +90,8 @@ class Client():
             self.rewind_active = True
             self.direction = -1
         else:
-            if self.undocount > 0:
-                if self.buffer_idx < 16:
+            if self.undocount > 0: # self.segment_idx = 0
+                if 0 < self.buffer_idx < 16:
                     self.segment = self.buffer[self.tail].copy()
                     self.segment_idx = self.buffer_idx
 
@@ -157,3 +157,13 @@ class Client():
             else:
                 self.record(Frame(float3 = (random.random(), random.random(), random.random()), velocity = (random.random(), random.random(), 0)))
             t.wait()
+
+    def clear(self):
+        self.tail = 0
+        self.count = 0
+        self.undocount = 0
+        self.buffer_idx = 0
+        self.segment_idx = 0
+
+        self.rewind_active = False
+        self.direction = 0

@@ -21,7 +21,7 @@ class MultitonMeta(type):
         key = (cls, args, frozenset(kwargs.items()))
         with cls._lock:
             if key not in cls._instances:
-                cls._instances[key] = type.__call__(*args, **kwargs)
+                cls._instances[key] = super().__call__(*args, **kwargs)
         return cls._instances[key]
 
 class ConditionalMultitonMeta(type):
