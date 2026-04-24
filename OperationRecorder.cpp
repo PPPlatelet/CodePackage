@@ -1,20 +1,26 @@
 #include <iostream>
+#include <iomanip>
+#include <random>
 #include <vector>
 #include <string>
 #include <stdexcept>
 #include <optional>
 #include <mutex>
 
-#define BUFFER_SIZE 10000
-
-size_t next(size_t index, size_t size, size_t step = 1)
+inline size_t next(const size_t &index, const size_t &size, const size_t &step = 1)
 {
     return (index + step) % size;
 }
 
-size_t prev(size_t index, size_t size, size_t step = 1)
+inline size_t prev(const size_t &index, const size_t &size, const size_t &step = 1)
 {
     return (index - step + size) % size;
+}
+
+inline void divmod(const size_t &x, const size_t &y, size_t &d, size_t &m)
+{
+    d = x / y;
+    m = x % y;
 }
 
 class OperationRecorder
@@ -22,6 +28,7 @@ class OperationRecorder
 private:
     size_t buffer_size;
     std::vector<std::optional<std::string>> buffer;
+    size_t head;
     size_t tail;
     size_t count;
     size_t undocount;
@@ -29,11 +36,10 @@ private:
     mutable std::mutex mtx;
 
 public:
-    OperationRecorder(size_t size = BUFFER_SIZE)
-        : buffer_size(size), buffer(size), tail(0), count(0), undocount(0) {}
+    OperationRecorder(size_t size = 10000)
+        : buffer_size(size), buffer(size), head(0), tail(0), count(0), undocount(0) {}
 
-    template <typename T>
-    void record(T &&data)
+    void record(std::string &&data)
     {
         std::lock_guard<std::mutex> lock(mtx);
 
@@ -42,10 +48,13 @@ public:
             count -= undocount;
             undocount = 0;
         }
-        buffer[tail] = std::forward<T>(data);
+        buffer[tail] = std::forward<std::string>(data);
 
         tail = next(tail, buffer_size);
-        count = std::min(count + 1, buffer_size);
+        if (count < buffer_size)
+            count++;
+        else
+            head = next(head, buffer_size);
     }
 
     std::optional<std::string> undo(size_t step = 1)
@@ -77,17 +86,18 @@ public:
 
         undocount -= actual;
 
-        std::string tmp = buffer[next(tail, buffer_size, actual - 1)].value();
+        std::string res = buffer[next(tail, buffer_size, actual - 1)].value();
 
         tail = next(tail, buffer_size, actual);
 
-        return tmp;
+        return res;
     }
 
     void clear()
     {
         std::lock_guard<std::mutex> lock(mtx);
 
+        head = 0;
         tail = 0;
         count = 0;
         undocount = 0;
@@ -112,17 +122,17 @@ struct Block
 class Player
 {
 private:
+    size_t size;
     std::vector<std::optional<Block>> buffer;
     size_t tail;
     size_t count;
     size_t undocount;
 
 public:
-    Player()
-        : buffer(BUFFER_SIZE), tail(0), count(0), undocount(0) {}
+    Player(size_t size = 10000)
+        : size(size), buffer(size), tail(0), count(0), undocount(0) {}
 
-    template <typename T>
-    void record(T &&block)
+    void record(Block &&block) noexcept
     {
         if (undocount > 0)
         {
@@ -130,7 +140,7 @@ public:
             undocount = 0;
         }
 
-        buffer[tail] = std::forward<T>(block);
+        buffer[tail] = std::forward<Block>(block);
 
         // if (block.source == nullptr)
         // {
@@ -148,21 +158,18 @@ public:
             buffer[tail]->count = 1;
         }
 
-        tail = next(tail, BUFFER_SIZE);
-        if (count < BUFFER_SIZE)
-        {
-            count++;
-        }
+        tail = next(tail, size);
+        count = std::min(count + 1, size);
     }
 
-    std::optional<Block> undo()
+    std::optional<Block> undo() noexcept
     {
         if (undocount >= count)
         {
             return std::nullopt;
         }
 
-        tail = prev(tail, BUFFER_SIZE);
+        tail = prev(tail, size);
         undocount++;
 
         // if (buffer[tail]->source == nullptr)
@@ -186,7 +193,7 @@ public:
         }
     }
 
-    std::optional<Block> redo()
+    std::optional<Block> redo() noexcept
     {
         if (undocount == 0)
         {
@@ -194,28 +201,234 @@ public:
         }
 
         undocount--;
-        std::optional<Block> tmp = std::nullopt;
+        std::optional<Block> res = std::nullopt;
 
         if (buffer[tail]->source == nullptr)
         {
             buffer[tail]->source = this;
             buffer[tail]->count = 1;
-            tmp = *buffer[tail];
+            res = *buffer[tail];
         }
         else if (buffer[tail]->source == this)
         {
             buffer[tail]->count++;
-            tmp = *buffer[tail];
+            res = *buffer[tail];
         }
         // else do nothing, return nullopt
-        tail = next(tail, BUFFER_SIZE);
-        return tmp;
+        tail = next(tail, size);
+        return res;
     }
 
-    void clear()
+    void clear() noexcept
     {
         tail = 0;
         count = 0;
         undocount = 0;
+    }
+};
+
+struct Vector3
+{
+    float x, y, z;
+};
+
+class Frame
+{
+private:
+    Vector3 float3;   // X, Y, Angle
+    Vector3 velocity; // Vx, Vy, 0
+public:
+    Frame(float x = 0, float y = 0, float angle = 0, float vx = 0, float vy = 0)
+        : float3{x, y, angle}, velocity{vx, vy, 0} {}
+
+    friend std::ostream &operator<<(std::ostream &os, const Frame &frame)
+    {
+        os << std::fixed << std::setprecision(2)
+           << "Position: (" << frame.float3.x << ", " << frame.float3.y << "), "
+           << "Angle: " << frame.float3.z << " degrees, "
+           << "Velocity: (" << frame.velocity.x << ", " << frame.velocity.y << ")";
+        return os;
+    }
+};
+
+class Client
+{
+private:
+    size_t capacity;
+    size_t size;
+
+    std::vector<std::vector<Frame>> segments;
+    size_t head;
+    size_t tail;
+    size_t count;
+
+    std::vector<Frame> seg;
+    size_t seg_idx;
+    size_t seg_snap;
+
+    size_t timeline_end;
+    size_t timeline_cursor;
+
+    bool replay_mode;
+    size_t direction;
+
+    bool paused;
+
+public:
+    Client(size_t capacity = 10000, size_t size = 16)
+        : capacity(capacity), size(size),
+          segments(capacity, std::vector<Frame>(size)), seg(size)
+    {
+        head = tail = count = 0;
+        seg_idx = seg_snap = 0;
+        timeline_end = timeline_cursor = 0;
+        replay_mode = false;
+        direction = 0;
+        paused = false;
+    }
+
+    void execute(const Frame &frame)
+    {
+        std::cout << "Execute frame:" << frame << std::endl;
+        signal_resume();
+    }
+
+    void record(const Frame &frame)
+    {
+        seg[seg_idx++] = frame;
+        if (seg_idx == size)
+        {
+            segments[tail] = seg;
+            tail = next(tail, capacity);
+            if (count < capacity)
+                count++;
+            else
+                head = next(head, capacity);
+            seg_idx = 0;
+        }
+    }
+
+    void replay()
+    {
+        if (!replay_mode)
+        {
+            seg_snap = seg_idx;
+
+            timeline_end = timeline_cursor = count * size;
+
+            replay_mode = true;
+            direction = -1;
+        }
+        else
+        {
+            size_t seg_pos, frame_pos;
+            divmod(timeline_cursor, size, seg_pos, frame_pos);
+
+            if (seg_pos < count)
+            {
+                count = seg_pos;
+                tail = next(head, capacity, count);
+                if (frame_pos > 0)
+                {
+                    seg = segments[next(head, capacity, seg_pos)];
+                    seg_idx = frame_pos;
+                }
+            }
+
+            replay_mode = false;
+            direction = 0;
+        }
+    }
+
+    void rewind()
+    {
+        switch (direction)
+        {
+        case 0:
+            break;
+        case -1:
+            if (seg_idx > 0)
+            {
+                execute(seg[--seg_idx]);
+                return;
+            }
+
+            if (timeline_cursor > 0)
+            {
+                size_t seg_pos, frame_pos;
+                divmod(--timeline_cursor, size, seg_pos, frame_pos);
+                execute(segments[next(head, capacity, seg_pos)][frame_pos]);
+                return;
+            }
+            break;
+        case 1:
+            if (timeline_cursor < timeline_end)
+            {
+                size_t seg_pos, frame_pos;
+                divmod(timeline_cursor++, size, seg_pos, frame_pos);
+                execute(segments[next(head, capacity, seg_pos)][frame_pos]);
+                return;
+            }
+
+            if (seg_idx < seg_snap)
+            {
+                execute(seg[seg_idx++]);
+                return;
+            }
+            break;
+        }
+        signal_stop();
+    }
+
+    void backward()
+    {
+        switch (direction)
+        {
+        case 0:
+            direction = -1;
+            signal_resume();
+            break;
+        case 1:
+            direction = 0;
+            signal_stop();
+            break;
+        default:
+            break;
+        }
+    }
+
+    void forward()
+    {
+        switch (direction)
+        {
+        case -1:
+            direction = 0;
+            signal_stop();
+            break;
+        case 0:
+            direction = 1;
+            signal_resume();
+            break;
+        default:
+            break;
+        }
+    }
+
+    void signal_resume()
+    {
+        if (paused)
+        {
+            paused = false;
+            std::cout << "Signal resume" << std::endl;
+        }
+    }
+
+    void signal_stop()
+    {
+        if (!paused)
+        {
+            paused = true;
+            std::cout << "Signal stop" << std::endl;
+        }
     }
 };
